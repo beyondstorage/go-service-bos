@@ -1,6 +1,6 @@
 // +build tools
 
-package example
+package bos
 
 import (
 	_ "github.com/beyondstorage/go-storage/v4/cmd/definitions"
