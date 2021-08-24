@@ -2,9 +2,9 @@ package bos
 
 import (
 	"fmt"
-	"github.com/baidubce/bce-sdk-go/bce"
 	"strings"
 
+	"github.com/baidubce/bce-sdk-go/bce"
 	"github.com/baidubce/bce-sdk-go/services/bos"
 
 	"github.com/beyondstorage/go-endpoint"
@@ -96,17 +96,15 @@ func newServicer(pairs ...types.Pair) (srv *Service, err error) {
 		return nil, err
 	}
 
-	var host string
-	var port int
+	var url string
 	switch ep.Protocol() {
 	case endpoint.ProtocolHTTP:
-		_, host, port = ep.HTTP()
+		url, _, _ = ep.HTTP()
 	case endpoint.ProtocolHTTPS:
-		_, host, port = ep.HTTPS()
+		url, _, _ = ep.HTTPS()
 	default:
 		return nil, services.PairUnsupportedError{Pair: ps.WithEndpoint(opt.Endpoint)}
 	}
-	url := fmt.Sprintf("%s:%d", host, port)
 
 	srv.service, err = bos.NewClient(ak, sk, url)
 	if err != nil {
@@ -136,6 +134,12 @@ func newServicerAndStorager(pairs ...types.Pair) (srv *Service, store *Storage, 
 	}
 	return
 }
+
+const (
+	// writeSizeMaximum is the maximum size for write operation, 5GB.
+	// ref: https://cloud.baidu.com/doc/BOS/s/Ikc5nv3wc
+	writeSizeMaximum = 5 * 1024 * 1024 * 1024
+)
 
 func (s *Storage) formatError(op string, err error, path ...string) error {
 	if err == nil {

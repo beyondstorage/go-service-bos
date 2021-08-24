@@ -2,6 +2,7 @@ package bos
 
 import (
 	"context"
+
 	. "github.com/beyondstorage/go-storage/v4/types"
 )
 

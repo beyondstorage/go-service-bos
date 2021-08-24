@@ -2,10 +2,11 @@ package bos
 
 import (
 	"context"
-	"github.com/baidubce/bce-sdk-go/bce"
+	"fmt"
 	"io"
 	"time"
 
+	"github.com/baidubce/bce-sdk-go/bce"
 	"github.com/baidubce/bce-sdk-go/services/bos/api"
 
 	ps "github.com/beyondstorage/go-storage/v4/pairs"
@@ -26,7 +27,7 @@ func (s *Storage) create(path string, opt pairStorageCreate) (o *Object) {
 		o = s.newObject(true)
 		o.Mode |= ModeDir
 	} else {
-		o = s.newObject(true)
+		o = s.newObject(false)
 		o.Mode |= ModeRead
 	}
 	o.ID = rp
@@ -133,6 +134,11 @@ func (s *Storage) stat(ctx context.Context, path string, opt pairStorageStat) (o
 }
 
 func (s *Storage) write(ctx context.Context, path string, r io.Reader, size int64, opt pairStorageWrite) (n int64, err error) {
+	if size > writeSizeMaximum {
+		err = fmt.Errorf("size limit exceeded: %w", services.ErrRestrictionDissatisfied)
+		return 0, err
+	}
+
 	rp := s.getAbsPath(path)
 
 	r = io.LimitReader(r, size)
@@ -140,13 +146,20 @@ func (s *Storage) write(ctx context.Context, path string, r io.Reader, size int6
 		r = iowrap.CallbackReader(r, opt.IoCallback)
 	}
 
-	bodyStream, err := bce.NewBodyFromFile(rp)
+	body, err := bce.NewBodyFromSizedReader(r, size)
 	if err != nil {
 		return 0, err
 	}
-	args := &api.PutObjectArgs{}
+	putArgs := &api.PutObjectArgs{}
 
-	_, err = s.client.PutObject(s.bucket, rp, bodyStream, args)
+	if opt.HasContentMd5 {
+		putArgs.ContentMD5 = opt.ContentMd5
+	}
+	if opt.HasStorageClass {
+		putArgs.StorageClass = opt.StorageClass
+	}
+
+	_, err = s.client.PutObject(s.bucket, rp, body, putArgs)
 	if err != nil {
 		return 0, err
 	}
