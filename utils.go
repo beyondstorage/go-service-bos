@@ -43,8 +43,7 @@ type Storage struct {
 // String implements Storager.String
 func (s *Storage) String() string {
 	return fmt.Sprintf(
-		""+
-			"Storager bos {Name: %s, WorkDir: %s}",
+		"Storager bos {Name: %s, WorkDir: %s}",
 		s.bucket, s.workDir,
 	)
 }
