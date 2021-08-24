@@ -69,7 +69,7 @@ func (s *Storage) metadata(opt pairStorageMetadata) (meta *StorageMeta) {
 func (s *Storage) read(ctx context.Context, path string, w io.Writer, opt pairStorageRead) (n int64, err error) {
 	rp := s.getAbsPath(path)
 
-	output, err := s.client.BasicGetObject(s.bucket, rp)
+	output, err := s.client.GetObject(s.bucket, rp, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -110,7 +110,7 @@ func (s *Storage) stat(ctx context.Context, path string, opt pairStorageStat) (o
 	}
 
 	o.SetContentLength(output.ContentLength)
-	lastModified, err := time.Parse("Mon, 02 Jan 2006 15:04:05 GMT", output.LastModified)
+	lastModified, err := time.Parse(time.RFC1123, output.LastModified)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,6 @@ func (s *Storage) write(ctx context.Context, path string, r io.Reader, size int6
 
 	rp := s.getAbsPath(path)
 
-	r = io.LimitReader(r, size)
 	if opt.HasIoCallback {
 		r = iowrap.CallbackReader(r, opt.IoCallback)
 	}
@@ -150,7 +149,9 @@ func (s *Storage) write(ctx context.Context, path string, r io.Reader, size int6
 	if err != nil {
 		return 0, err
 	}
-	putArgs := &api.PutObjectArgs{}
+	putArgs := &api.PutObjectArgs{
+		ContentLength: size,
+	}
 
 	if opt.HasContentMd5 {
 		putArgs.ContentMD5 = opt.ContentMd5

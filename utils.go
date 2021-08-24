@@ -27,7 +27,7 @@ func (s *Service) String() string {
 	return fmt.Sprintf("Servicer bos")
 }
 
-// Storage is the example client.
+// Storage is the bos service
 type Storage struct {
 	client *bos.Client
 
