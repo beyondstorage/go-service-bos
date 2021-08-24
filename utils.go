@@ -202,9 +202,6 @@ func (s *Service) newStorage(pairs ...types.Pair) (store *Storage, err error) {
 	}
 
 	if opt.HasWorkDir {
-		if !strings.HasSuffix(opt.WorkDir, "/") {
-			opt.WorkDir += "/"
-		}
 		store.workDir = opt.WorkDir
 	}
 	if opt.HasDefaultStoragePairs {
