@@ -3,9 +3,11 @@ package bos
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/baidubce/bce-sdk-go/bce"
 	"github.com/baidubce/bce-sdk-go/services/bos"
+	"github.com/baidubce/bce-sdk-go/services/bos/api"
 
 	"github.com/beyondstorage/go-endpoint"
 	ps "github.com/beyondstorage/go-storage/v4/pairs"
@@ -14,6 +16,7 @@ import (
 	"github.com/beyondstorage/go-storage/v4/types"
 )
 
+// Service is the bos service
 type Service struct {
 	service *bos.Client
 
@@ -27,7 +30,7 @@ func (s *Service) String() string {
 	return fmt.Sprintf("Servicer bos")
 }
 
-// Storage is the bos service
+// Storage is the bos client
 type Storage struct {
 	client *bos.Client
 
@@ -49,7 +52,7 @@ func (s *Storage) String() string {
 }
 
 func New(pairs ...types.Pair) (types.Servicer, types.Storager, error) {
-	return newServicerAndStorager()
+	return newServicerAndStorager(pairs...)
 }
 
 func NewServicer(pairs ...types.Pair) (types.Servicer, error) {
@@ -59,6 +62,7 @@ func NewServicer(pairs ...types.Pair) (types.Servicer, error) {
 // NewStorager will create Storager only.
 func NewStorager(pairs ...types.Pair) (types.Storager, error) {
 	_, store, err := newServicerAndStorager(pairs...)
+	fmt.Println(store)
 	return store, err
 }
 
@@ -225,9 +229,33 @@ func (s *Storage) getRelPath(path string) string {
 	return strings.TrimPrefix(path, prefix)
 }
 
-func (s *Storage) formatFileObject() {
-	// TODO
-	panic("not implemented")
+func (s *Storage) formatFileObject(v api.ObjectSummaryType) (o *types.Object, err error) {
+	o = s.newObject(false)
+	o.ID = v.Key
+	o.Path = s.getRelPath(v.Key)
+	o.Mode |= types.ModeRead
+
+	o.SetContentLength(int64(v.Size))
+	// Last-Modified returns a format of :
+	// 2009-10-12T17:50:30Z
+	// ref:https://cloud.baidu.com/doc/BOS/s/Ekc4epj6m#%E7%A4%BA%E4%BE%8B
+	lastModified, err := time.Parse(time.RFC3339, v.LastModified)
+	if err != nil {
+		return nil, err
+	}
+	o.SetLastModified(lastModified)
+
+	if v.ETag != "" {
+		o.SetEtag(v.ETag)
+	}
+
+	var sm ObjectSystemMetadata
+	if value := v.StorageClass; value != "" {
+		sm.StorageClass = value
+	}
+	o.SetSystemMetadata(sm)
+
+	return
 }
 
 func (s *Storage) newObject(done bool) *types.Object {
