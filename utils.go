@@ -62,7 +62,6 @@ func NewServicer(pairs ...types.Pair) (types.Servicer, error) {
 // NewStorager will create Storager only.
 func NewStorager(pairs ...types.Pair) (types.Storager, error) {
 	_, store, err := newServicerAndStorager(pairs...)
-	fmt.Println(store)
 	return store, err
 }
 
