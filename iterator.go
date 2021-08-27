@@ -17,6 +17,6 @@ type storagePageStatus struct {
 	buckets []api.BucketSummaryType
 }
 
-func (s *storagePageStatus) ContinuationToken() string {
+func (i *storagePageStatus) ContinuationToken() string {
 	return ""
 }
