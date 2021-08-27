@@ -49,11 +49,11 @@ func (s *Storage) delete(ctx context.Context, path string, opt pairStorageDelete
 
 	err = s.client.DeleteObject(s.bucket, rp)
 	if err != nil {
-		// bos DeleteObject is not idempotent, so we need to check object_not_exists error.
-		//
-		// - [GSP-46](https://github.com/beyondstorage/specs/blob/master/rfcs/46-idempotent-delete.md)
-		// - https://cloud.baidu.com/doc/BOS/s/bkc5tsslq
-		if err.(*bce.BceServiceError).Code == "NoSuchKey" {
+		if e, ok := err.(*bce.BceServiceError); ok && e.Code == "NoSuchKey" {
+			// bos DeleteObject is not idempotent, so we need to check object_not_exists error.
+			//
+			// - [GSP-46](https://github.com/beyondstorage/specs/blob/master/rfcs/46-idempotent-delete.md)
+			// - https://cloud.baidu.com/doc/BOS/s/bkc5tsslq
 			err = nil
 		} else {
 			return err
