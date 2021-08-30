@@ -50,14 +50,10 @@ func (s *Service) list(ctx context.Context, opt pairServiceList) (sti *StoragerI
 }
 
 func (s *Service) nexStoragePage(ctx context.Context, page *StoragerPage) error {
-	input := page.Status.(*storagePageStatus)
-
 	output, err := s.service.ListBuckets()
 	if err != nil {
 		return err
 	}
-
-	input.buckets = output.Buckets
 
 	for _, v := range output.Buckets {
 		store, err := s.newStorage(ps.WithName(v.Name))
