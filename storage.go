@@ -49,14 +49,45 @@ func (s *Storage) delete(ctx context.Context, path string, opt pairStorageDelete
 
 	err = s.client.DeleteObject(s.bucket, rp)
 	if err != nil {
-		return err
+		if e, ok := err.(*bce.BceServiceError); ok && e.Code == "NoSuchKey" {
+			// bos DeleteObject is not idempotent, so we need to check object_not_exists error.
+			//
+			// - [GSP-46](https://github.com/beyondstorage/specs/blob/master/rfcs/46-idempotent-delete.md)
+			// - https://cloud.baidu.com/doc/BOS/s/bkc5tsslq
+			err = nil
+		} else {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (s *Storage) list(ctx context.Context, path string, opt pairStorageList) (oi *ObjectIterator, err error) {
-	panic("not implemented")
+	input := &objectPageStatus{
+		maxKeys: 200,
+		prefix:  s.getAbsPath(path),
+	}
+
+	if !opt.HasListMode {
+		// Support `ListModePrefix` as the default `ListMode`.
+		// ref: [GSP-46](https://github.com/beyondstorage/go-storage/blob/master/docs/rfcs/654-unify-list-behavior.md)
+		opt.ListMode = ListModePrefix
+	}
+
+	var nextFn NextObjectFunc
+
+	switch {
+	case opt.ListMode.IsDir():
+		input.delimiter = "/"
+		nextFn = s.nextObjectPageByDir
+	case opt.ListMode.IsPrefix():
+		nextFn = s.nextObjectPageByPrefix
+	default:
+		return nil, services.ListModeInvalidError{Actual: opt.ListMode}
+	}
+
+	return NewObjectIterator(ctx, nextFn, input), nil
 }
 
 func (s *Storage) metadata(opt pairStorageMetadata) (meta *StorageMeta) {
@@ -64,6 +95,87 @@ func (s *Storage) metadata(opt pairStorageMetadata) (meta *StorageMeta) {
 	meta.Name = s.bucket
 	meta.WorkDir = s.workDir
 	return meta
+}
+
+func (s *Storage) nextObjectPageByDir(ctx context.Context, page *ObjectPage) error {
+	input := page.Status.(*objectPageStatus)
+
+	listArgs := &api.ListObjectsArgs{
+		Delimiter: input.delimiter,
+		MaxKeys:   input.maxKeys,
+		Prefix:    input.prefix,
+		Marker:    input.marker,
+	}
+
+	output, err := s.client.ListObjects(s.bucket, listArgs)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range output.CommonPrefixes {
+		o := s.newObject(true)
+		o.ID = v.Prefix
+		o.Path = s.getRelPath(v.Prefix)
+		o.Mode |= ModeDir
+
+		page.Data = append(page.Data, o)
+	}
+
+	for _, v := range output.Contents {
+		o, err := s.formatFileObject(v)
+		if err != nil {
+			return err
+		}
+
+		page.Data = append(page.Data, o)
+	}
+
+	if output.NextMarker == "" {
+		return IterateDone
+	}
+	if !output.IsTruncated {
+		return IterateDone
+	}
+
+	input.marker = output.NextMarker
+
+	return nil
+}
+
+func (s *Storage) nextObjectPageByPrefix(ctx context.Context, page *ObjectPage) error {
+	input := page.Status.(*objectPageStatus)
+
+	listArgs := &api.ListObjectsArgs{
+		Delimiter: input.delimiter,
+		MaxKeys:   input.maxKeys,
+		Prefix:    input.prefix,
+		Marker:    input.marker,
+	}
+
+	output, err := s.client.ListObjects(s.bucket, listArgs)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range output.Contents {
+		o, err := s.formatFileObject(v)
+		if err != nil {
+			return err
+		}
+
+		page.Data = append(page.Data, o)
+	}
+
+	if output.NextMarker == "" {
+		return IterateDone
+	}
+	if !output.IsTruncated {
+		return IterateDone
+	}
+
+	input.marker = output.NextMarker
+
+	return nil
 }
 
 func (s *Storage) read(ctx context.Context, path string, w io.Writer, opt pairStorageRead) (n int64, err error) {
@@ -110,6 +222,9 @@ func (s *Storage) stat(ctx context.Context, path string, opt pairStorageStat) (o
 	}
 
 	o.SetContentLength(output.ContentLength)
+	// Last-Modified returns a format of :
+	// Fri, 28 Jan 2011 20:10:32 GMT
+	// ref:https://cloud.baidu.com/doc/BOS/s/xkc5pcmcj#%E7%A4%BA%E4%BE%8B
 	lastModified, err := time.Parse(time.RFC1123, output.LastModified)
 	if err != nil {
 		return nil, err
