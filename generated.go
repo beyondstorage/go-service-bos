@@ -4,8 +4,10 @@ package bos
 import (
 	"context"
 	"io"
+	"net/http"
 	"time"
 
+	. "github.com/beyondstorage/go-storage/v4/pairs"
 	"github.com/beyondstorage/go-storage/v4/pkg/httpclient"
 	"github.com/beyondstorage/go-storage/v4/services"
 	. "github.com/beyondstorage/go-storage/v4/types"
@@ -15,6 +17,8 @@ var _ Storager
 var _ services.ServiceError
 var _ httpclient.Options
 var _ time.Duration
+var _ http.Request
+var _ Error
 
 // Type is the type for bos
 const Type = "bos"
@@ -86,6 +90,21 @@ func WithDefaultStoragePairs(v DefaultStoragePairs) Pair {
 	}
 }
 
+// WithEnableVirtualDir will apply enable_virtual_dir value to Options.
+//
+// VirtualDir virtual_dir feature is designed for a service that doesn't have native dir support but wants to provide simulated operations.
+//
+// - If this feature is disabled (the default behavior), the service will behave like it doesn't have any dir support.
+// - If this feature is enabled, the service will support simulated dir behavior in create_dir, create, list, delete, and so on.
+//
+// This feature was introduced in GSP-109.
+func WithEnableVirtualDir() Pair {
+	return Pair{
+		Key:   "enable_virtual_dir",
+		Value: true,
+	}
+}
+
 // WithServiceFeatures will apply service_features value to Options.
 //
 // ServiceFeatures set service features
@@ -124,6 +143,7 @@ var pairMap = map[string]string{
 	"credential":            "string",
 	"default_service_pairs": "DefaultServicePairs",
 	"default_storage_pairs": "DefaultStoragePairs",
+	"enable_virtual_dir":    "bool",
 	"endpoint":              "string",
 	"expire":                "time.Duration",
 	"http_client_options":   "*httpclient.Options",
@@ -162,6 +182,8 @@ type pairServiceNew struct {
 	DefaultServicePairs    DefaultServicePairs
 	HasServiceFeatures     bool
 	ServiceFeatures        ServiceFeatures
+	// Enable features
+	// Default pairs
 }
 
 // parsePairServiceNew will parse Pair slice into *pairServiceNew
@@ -198,8 +220,15 @@ func parsePairServiceNew(opts []Pair) (pairServiceNew, error) {
 			}
 			result.HasServiceFeatures = true
 			result.ServiceFeatures = v.Value.(ServiceFeatures)
+			// Enable features
+			// Default pairs
 		}
 	}
+
+	// Enable features
+
+	// Default pairs
+
 	if !result.HasCredential {
 		return pairServiceNew{}, services.PairRequiredError{Keys: []string{"credential"}}
 	}
@@ -439,6 +468,10 @@ type pairStorageNew struct {
 	StorageFeatures        StorageFeatures
 	HasWorkDir             bool
 	WorkDir                string
+	// Enable features
+	hasEnableVirtualDir bool
+	EnableVirtualDir    bool
+	// Default pairs
 }
 
 // parsePairStorageNew will parse Pair slice into *pairStorageNew
@@ -475,8 +508,25 @@ func parsePairStorageNew(opts []Pair) (pairStorageNew, error) {
 			}
 			result.HasWorkDir = true
 			result.WorkDir = v.Value.(string)
+		// Enable features
+		case "enable_virtual_dir":
+			if result.hasEnableVirtualDir {
+				continue
+			}
+			result.hasEnableVirtualDir = true
+			result.EnableVirtualDir = true
+			// Default pairs
 		}
 	}
+
+	// Enable features
+	if result.hasEnableVirtualDir {
+		result.HasStorageFeatures = true
+		result.StorageFeatures.VirtualDir = true
+	}
+
+	// Default pairs
+
 	if !result.HasName {
 		return pairStorageNew{}, services.PairRequiredError{Keys: []string{"name"}}
 	}
