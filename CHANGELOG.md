@@ -10,5 +10,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Implement bos services.
-
-[1.0.0]: https://github.com/beyondstorage/go-service-s3/compare/v1.0.0
