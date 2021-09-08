@@ -1,7 +1,7 @@
 github.com/Xuanwo/templateutils v0.1.0 h1:WpkWOqQtIQ2vAIpJLa727DdN8WtxhUkkbDGa6UhntJY=
 github.com/Xuanwo/templateutils v0.1.0/go.mod h1:OdE0DJ+CJxDBq6psX5DPV+gOZi8bhuHuVUpPCG++Wb8=
-github.com/baidubce/bce-sdk-go v0.9.85 h1:mkqHR3h03SyY4lNi5FHxccJC3hqH4i6YzT7I8/2wzlk=
-github.com/baidubce/bce-sdk-go v0.9.85/go.mod h1:zbYJMQwE4IZuyrJiFO8tO8NbtYiKTFTbwh4eIsqjVdg=
+github.com/baidubce/bce-sdk-go v0.9.87 h1:dFe/jqUxYtsGZ4hebN3mUOWaN7hmNTijL55tEhBOtpE=
+github.com/baidubce/bce-sdk-go v0.9.87/go.mod h1:zbYJMQwE4IZuyrJiFO8tO8NbtYiKTFTbwh4eIsqjVdg=
 github.com/beyondstorage/go-endpoint v1.1.0 h1:cpjmQdrAMyaLoT161NIFU/eXcsuMI3xViycid5/mBZg=
 github.com/beyondstorage/go-endpoint v1.1.0/go.mod h1:P2hknaGrziOJJKySv/XnAiVw/d3v12/LZu2gSxEx4nM=
 github.com/beyondstorage/go-integration-test/v4 v4.3.0 h1:WZ95f78RKlHpvft8zHcMaoa2aaTF/jzlzINhMD0EMHY=
