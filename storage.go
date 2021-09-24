@@ -254,6 +254,12 @@ func (s *Storage) write(ctx context.Context, path string, r io.Reader, size int6
 		return 0, err
 	}
 
+	// According to GSP-751, we should allow the user to pass in a nil io.Reader.
+	// ref: https://github.com/beyondstorage/go-storage/blob/master/docs/rfcs/751-write-empty-file-behavior.md
+	if r == nil && size != 0 {
+		return 0, fmt.Errorf("reader is nil but size is not 0")
+	}
+
 	rp := s.getAbsPath(path)
 
 	if opt.HasIoCallback {
