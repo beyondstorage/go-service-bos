@@ -181,7 +181,17 @@ func (s *Storage) nextObjectPageByPrefix(ctx context.Context, page *ObjectPage) 
 func (s *Storage) read(ctx context.Context, path string, w io.Writer, opt pairStorageRead) (n int64, err error) {
 	rp := s.getAbsPath(path)
 
-	output, err := s.client.GetObject(s.bucket, rp, nil)
+	output := &api.GetObjectResult{}
+	if opt.HasOffset && !opt.HasSize {
+		output, err = s.client.GetObject(s.bucket, rp, nil, opt.Offset)
+	} else if !opt.HasOffset && opt.HasSize {
+		output, err = s.client.GetObject(s.bucket, rp, nil, 0, opt.Size-1)
+	} else if opt.HasSize && opt.HasOffset {
+		output, err = s.client.GetObject(s.bucket, rp, nil, opt.Offset, opt.Offset+opt.Size-1)
+	} else {
+		output, err = s.client.GetObject(s.bucket, rp, nil)
+	}
+
 	if err != nil {
 		return 0, err
 	}
