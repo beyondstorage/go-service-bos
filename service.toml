@@ -4,14 +4,13 @@ name = "bos"
 
 [namespace.service.new]
 required = ["credential", "endpoint"]
-optional = ["service_features", "default_service_pairs"]
 
 [namespace.storage]
 features = ["virtual_dir"]
 
 [namespace.storage.new]
 required = ["name"]
-optional = ["storage_features", "default_storage_pairs", "work_dir"]
+optional = ["work_dir"]
 
 [namespace.storage.op.create]
 optional = ["object_mode"]
